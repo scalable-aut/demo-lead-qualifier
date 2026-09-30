@@ -1,0 +1,35 @@
+# Environment secrets — never commit these
+.env
+.env.local
+.env.*.local
+trigger/.env
+
+# Node modules
+node_modules/
+trigger/node_modules/
+frontend/node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# TypeScript build output
+trigger/dist/
+tools/dist/
+
+# Trigger.dev
+.trigger/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

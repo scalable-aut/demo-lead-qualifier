@@ -1,0 +1,12 @@
+{
+  "firstName": "Sarah",
+  "lastName": "Chen",
+  "company": "Stackline Analytics",
+  "industry": "SaaS",
+  "companySize": "51-200",
+  "role": "VP of Operations",
+  "useCase": "We need to automate our client onboarding pipeline. Currently 3 people manually review intake forms and route them — takes 2 days on average. We want this under 4 hours.",
+  "budget": "$5k–$20k",
+  "timeline": "1-3 months",
+  "source": "LinkedIn"
+}
