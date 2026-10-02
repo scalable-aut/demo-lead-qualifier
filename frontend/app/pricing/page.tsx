@@ -151,7 +151,7 @@ export default async function PricingPage({
       </div>
 
       <p className="mt-10 text-center text-xs text-ink-3">
-        Payments are processed securely by Stripe. Cancel anytime from your account.
+        Payments are processed securely by Lemon Squeezy. Cancel anytime from your account.
       </p>
     </main>
   );
