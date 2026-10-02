@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRealtimeRun } from "@trigger.dev/react-hooks";
 import LeadQualifierForm from "../components/LeadQualifierForm";
 import QualificationResultPanel from "../components/QualificationResult";
@@ -9,8 +9,9 @@ import type { LeadPayload, QualificationResult } from "@/lib/types";
 type AppState =
   | { phase: "idle" }
   | { phase: "submitting" }
-  | { phase: "polling"; runId: string; token: string }
-  | { phase: "error"; message: string };
+  | { phase: "polling"; runId: string; token: string; payload: LeadPayload }
+  | { phase: "error"; message: string }
+  | { phase: "limit_reached" };
 
 const ACTIVE_STATUSES = new Set(["QUEUED", "EXECUTING", "REATTEMPTING", "WAITING_FOR_DEPLOY"]);
 const DONE_STATUSES = new Set(["COMPLETED", "FAILED", "CRASHED", "CANCELED", "SYSTEM_FAILURE"]);
@@ -27,11 +28,15 @@ export default function Page() {
         body: JSON.stringify(payload),
       });
       const data = await res.json() as { runId?: string; publicAccessToken?: string; error?: string };
+      if (res.status === 403 && data.error === "limit_reached") {
+        setState({ phase: "limit_reached" });
+        return;
+      }
       if (!res.ok || !data.runId || !data.publicAccessToken) {
         setState({ phase: "error", message: data.error ?? "Unexpected error — check the console." });
         return;
       }
-      setState({ phase: "polling", runId: data.runId, token: data.publicAccessToken });
+      setState({ phase: "polling", runId: data.runId, token: data.publicAccessToken, payload });
     } catch {
       setState({ phase: "error", message: "Network error — check your connection." });
     }
@@ -45,17 +50,6 @@ export default function Page() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet text-white text-xs font-bold select-none">
-            LQ
-          </span>
-          <span className="text-sm font-semibold text-ink tracking-tight">Lead Qualifier</span>
-          <span className="ml-2 text-xs text-ink-3 font-medium">AI-powered B2B scoring</span>
-        </div>
-      </header>
-
       {/* Main split layout */}
       <main className="flex-1 mx-auto w-full max-w-6xl px-6 py-10">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1fr] lg:gap-12">
@@ -115,7 +109,28 @@ function ResultPanel({ appState, onReset }: ResultPanelProps) {
   const isFailed = run && DONE_STATUSES.has(run.status) && run.status !== "COMPLETED";
   const result = isCompleted ? (run.output as QualificationResult) : null;
 
+  // Save completed result to Supabase — fire-and-forget, one attempt per run
+  const savedRef = useRef(false);
+  useEffect(() => {
+    if (!isCompleted || !result || savedRef.current) return;
+    if (appState.phase !== "polling") return;
+    savedRef.current = true;
+
+    const { runId: completedRunId, payload } = appState;
+    void fetch("/api/qualify/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ runId: completedRunId, payload, result }),
+    }).catch((err) => {
+      console.error("[qualify/save] Failed to save result:", err);
+    });
+  }, [isCompleted, result, appState]);
+
   /* States */
+  if (appState.phase === "limit_reached") {
+    return <LimitReachedState onReset={onReset} />;
+  }
+
   if (appState.phase === "idle") {
     return <EmptyState />;
   }
@@ -225,6 +240,31 @@ function ErrorState({ message, onReset }: { message: string; onReset: () => void
       >
         ← Try again
       </button>
+    </div>
+  );
+}
+
+function LimitReachedState({ onReset }: { onReset: () => void }) {
+  return (
+    <div className="rounded-xl border border-violet/30 bg-violet/5 p-6 shadow-sm">
+      <p className="text-sm font-semibold text-violet mb-1">Daily limit reached</p>
+      <p className="text-sm text-ink-2 mb-4">
+        Free accounts can qualify 2 leads per day. Upgrade to Pro for unlimited qualifications.
+      </p>
+      <div className="flex items-center gap-3">
+        <a
+          href="/pricing"
+          className="inline-flex items-center px-4 py-2 rounded-md bg-violet text-white text-xs font-semibold hover:opacity-90 transition-opacity"
+        >
+          Upgrade to Pro — $29/mo
+        </a>
+        <button
+          onClick={onReset}
+          className="text-xs font-medium text-ink-3 hover:text-ink-2 transition-colors"
+        >
+          Back
+        </button>
+      </div>
     </div>
   );
 }

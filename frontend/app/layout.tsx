@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import NavBar from "@/components/NavBar";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -21,7 +22,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={dmSans.variable}>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <NavBar />
+        {children}
+      </body>
     </html>
   );
 }

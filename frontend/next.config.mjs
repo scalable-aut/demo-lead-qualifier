@@ -2,7 +2,7 @@
 const nextConfig = {
   // Trigger.dev SDK contains server-only code — keep it out of the browser bundle.
   experimental: {
-    serverComponentsExternalPackages: ["@trigger.dev/sdk"],
+    serverComponentsExternalPackages: ["@trigger.dev/sdk", "@supabase/ssr"],
   },
 };
 
